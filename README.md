@@ -54,6 +54,147 @@ The SQLite database contains an `AccessLog` table with:
 
 The Fastify API uses async/await for all database operations to avoid blocking the Node.js Event Loop, ensuring high concurrency and low latency.
 
+## 🗄️ Prisma ORM Integration
+
+Prisma is a modern TypeScript ORM that provides type-safe database access, migrations, and a powerful query builder. It's similar to Spring Data JPA in the Java ecosystem but with a more explicit and type-safe approach.
+
+### Key Features
+
+1. **Type-Safe Database Client**: Auto-generated TypeScript types for all database models
+2. **Declarative Schema**: Database schema defined in `prisma/schema.prisma`
+3. **Migrations**: Version-controlled database schema changes
+4. **Query Builder**: Fluent API for building complex queries
+
+### Prisma vs Spring Data JPA Comparison
+
+| Aspect | Prisma (TypeScript) | Spring Data JPA (Java) |
+|--------|---------------------|------------------------|
+| **Schema Definition** | Declarative `.prisma` file | JPA annotations in entity classes |
+| **Type Safety** | Compile-time TypeScript types | Runtime reflection |
+| **Query Building** | Method chaining with auto-completion | JPQL or method name derivation |
+| **Migrations** | Built-in migration tool (`prisma migrate`) | Flyway/Liquibase or Hibernate auto-DDL |
+| **Relations** | Explicit relation fields | `@OneToMany`, `@ManyToOne` annotations |
+| **Transactions** | `$transaction()` method | `@Transactional` annotation |
+
+### Database Models
+
+The project uses two main models:
+
+**Order Model** (for NestJS Orders API)
+```prisma
+model Order {
+  id        Int      @id @default(autoincrement())
+  product   String
+  price     Float
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+```
+
+**AccessLog Model** (for Fastify Logging API)
+```prisma
+model AccessLog {
+  id        Int      @id @default(autoincrement())
+  ip        String
+  userAgent String?
+  timestamp DateTime @default(now())
+}
+```
+
+### Usage in NestJS Services
+
+Prisma is injected as a service using dependency injection, similar to how `EntityManager` or `JpaRepository` is injected in Spring Boot:
+
+```typescript
+// Spring Boot equivalent: @Autowired private OrderRepository orderRepository;
+constructor(private prisma: PrismaService) {}
+
+async findAll() {
+  // Equivalent to JPA: orderRepository.findAll(Sort.by("createdAt").descending());
+  return await this.prisma.order.findMany({
+    orderBy: {
+      createdAt: 'desc',
+    },
+  });
+}
+```
+
+### Common Operations
+
+| Operation | Prisma | Spring Data JPA |
+|-----------|--------|-----------------|
+| **Create** | `prisma.order.create({ data })` | `orderRepository.save(order)` |
+| **Find All** | `prisma.order.findMany()` | `orderRepository.findAll()` |
+| **Find by ID** | `prisma.order.findUnique({ where: { id } })` | `orderRepository.findById(id)` |
+| **Update** | `prisma.order.update({ where: { id }, data })` | `orderRepository.save(existingOrder)` |
+| **Delete** | `prisma.order.delete({ where: { id } })` | `orderRepository.deleteById(id)` |
+| **Count** | `prisma.order.count()` | `orderRepository.count()` |
+
+### Error Handling
+
+Prisma throws specific error codes that can be caught and converted to appropriate HTTP responses:
+
+```typescript
+try {
+  return await this.prisma.order.update({ where: { id }, data });
+} catch (error) {
+  if (error.code === 'P2025') { // Record not found
+    throw new NotFoundException(`Order with ID ${id} not found`);
+  }
+  throw error;
+}
+```
+
+### Database Setup Commands
+
+```bash
+# Generate Prisma Client (similar to compiling JPA entities)
+npm run prisma:generate
+
+# Create and apply migrations (similar to Flyway/Liquibase)
+npm run prisma:migrate
+
+# Push schema changes directly (development only)
+npm run prisma:dbpush
+
+# Open Prisma Studio (web-based database browser)
+npm run prisma:studio
+```
+
+### Environment Configuration
+
+Database connection is configured via environment variables in `.env` file:
+
+```env
+DATABASE_URL="file:./dev.db"
+```
+
+This is similar to Spring Boot's `application.properties`:
+```properties
+spring.datasource.url=jdbc:sqlite:dev.db
+```
+
+### Advantages for Spring Developers
+
+1. **Explicit Queries**: No "magic" method name parsing - queries are explicit and type-checked
+2. **No Runtime Reflection**: All types are known at compile time
+3. **Migration History**: Built-in migration tracking with rollback support
+4. **Database Agnostic**: Same code works with SQLite, PostgreSQL, MySQL, etc.
+5. **TypeScript Integration**: Full IDE autocompletion and type checking
+
+### Production Considerations
+
+1. **Connection Pooling**: Prisma Client includes built-in connection pooling
+2. **Transaction Management**: Use `prisma.$transaction()` for complex operations
+3. **Query Optimization**: Prisma provides tools for analyzing and optimizing queries
+4. **Database Views**: Support for database views and raw SQL when needed
+
+### Learning Resources
+
+- [Prisma Documentation](https://www.prisma.io/docs/) - Official docs
+- [Prisma with NestJS](https://docs.nestjs.com/recipes/prisma) - Integration guide
+- [Type-Safe Database Access](https://www.prisma.io/blog) - Blog articles
+
 ## 🛠️ NestJS Orders API
 
 [Previous NestJS documentation remains valid]
