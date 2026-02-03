@@ -1,0 +1,29 @@
+// prisma/schema.prisma
+
+generator client {
+  provider = "prisma-client-js"
+  // O PULO DO GATO: Diz ao Prisma para usar a lib do sistema atual (Arch/CachyOS)
+  binaryTargets = ["native"]
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// Seu modelo de Pedido
+model Order {
+  id        Int      @id @default(autoincrement())
+  product   String
+  price     Float
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// Adicione isso no final do prisma/schema.prisma
+model AccessLog {
+  id        Int      @id @default(autoincrement())
+  ip        String
+  userAgent String?
+  timestamp DateTime @default(now())
+}
